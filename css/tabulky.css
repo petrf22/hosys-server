@@ -1,0 +1,53 @@
+body {
+	margin: 0px;
+}
+.cDivBar,
+.cTrFiltry,
+.bBar {
+	display: none;
+}
+form table.cTableData tr:nth-child(1),
+form table.cTableData tr:nth-child(2),
+form table.cTableData tr:nth-child(3),
+form table.cTableData tr:nth-child(4),
+form table.cTableData tr:nth-child(5) {
+	display: none;
+}
+table {
+	font-family: open-sans, Tahoma, Verdana;
+	font-size: 10pt;
+	font-weight: normal;
+	text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.15);
+	margin: auto auto;
+}
+tr.cTrOdd {
+	background-color: #dddddd;
+}
+tr.cTrEven {
+	background-color: #eeeeee;
+}
+.cTdNumberCifra,
+.cTdNumberSkorePlus,
+.cTdTextSkoreMinus,
+.cTdNumberBody,
+.cTdNumberUtkani {
+	text-align: right;
+}
+@media screen and (max-width: 360px) {
+	.cTdTitleZkratka,
+	.cTdTextZkratka {
+		display: none;
+	}
+}
+.cTdTitlePoradi,
+.cTdTitleZkratka,
+.cTdTitleKlub,
+.cTdTitleUtkani,
+.cTdTitleCifra,
+.cTdTitleSkore,
+.cTdTitleBody {
+	font-size: 50%;
+}
+.cTdNumberCifra {
+	white-space: nowrap;
+}

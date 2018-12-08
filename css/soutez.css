@@ -1,0 +1,42 @@
+body {
+	margin: 0px;
+}
+.cDivBar,
+.cTrFiltry,
+.bBar {
+	display: none;
+}
+form table.cTableData tr:nth-child(1),
+form table.cTableData tr:nth-child(2),
+form table.cTableData tr:nth-child(3),
+form table.cTableData tr:nth-child(4),
+form table.cTableData tr:nth-child(5),
+form table.cTableData tr:nth-child(6),
+form table.cTableData tr:nth-child(7),
+form table.cTableData tr:nth-child(8),
+form table.cTableData tr:nth-child(9) {
+	display: none;
+}
+table {
+	font-family: open-sans, Tahoma, Verdana;
+	font-size: 10pt;
+	font-weight: normal;
+	text-shadow: 0 -1px 0 rgba(0,0,0,0.15);
+	margin: auto auto;
+}
+.cTdSoutezeLabel,
+.cTdSoutezeValueKolo {
+	font-weight: bold;
+}
+.cTdSoutezeValueSmall {
+	white-space: nowrap;
+}
+.cTdSoutezeLabelSmall {
+	display: none;
+}
+tr:nth-child(even) {
+	background: #eeeeee;
+}
+tr:nth-child(odd) {
+	background: #dddddd;
+}

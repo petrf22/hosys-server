@@ -1,0 +1,58 @@
+body {
+  margin: 0px;
+}
+.bBar,
+.cTrFiltry,
+.cTdUtkaniAll {
+  display: none;
+}
+@media screen and (max-width: 360px) {
+  .cTdTiStadionRO,
+  .cTdTeStadion,
+  .cTdTiSoutezRO,
+  .cTdTeSoutez,
+  .cTdTiCislo,
+  .cTdTeCislo,
+  .cTdTiOba,
+  .cTdTeOba {
+    display: none;
+  }
+}
+table {
+  font-family: open-sans, Tahoma, Verdana;
+  font-size: 10pt;
+  font-weight: normal;
+  text-shadow: 0 -1px 0 rgba(0,0,0,0.15);
+  margin: auto auto;
+}
+tr.cTrUtkani {
+  font-size: 60%;
+}
+tr.cTrUtkani + tr.cTrCara {
+  display: none;
+}
+tr.cTrCara, td.cTrCara {
+  font-size: 2px;
+  padding: 0px;
+}
+.cTrRozlosovane {
+  background-color: #bfcbca;
+}
+.cTrOdehrane {
+  background-color: #89e987;
+}
+.cTrRozlosovane {
+  background-color: #bfcbca;
+}
+.cTrNahlasene {
+  background-color: #76bdea;
+}
+.cTrK_rozhodnuti {
+  background-color: #fcdc7c;
+}
+.cTrNavrh {
+  background-color: #f1877f;
+}
+.cSpanZmena {
+  color: #0000ff;
+}
