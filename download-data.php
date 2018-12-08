@@ -1,39 +1,15 @@
 <?php
+require("consts.php");
+require("functions.php");
+
 header("Content-Type: text/plain");
 
-define("COOKIE", "ASP.NET_SessionId=");
-define("PAGE_ROZPIS", "https://www.hosys.cz/Rozpis.htm");
-define("DB_SERVER", "server");
-define("DB_NAME", "name");
-define("DB_USER", "user");
-define("DB_PASS", "pass");
-
 function getCookies($page) {
-    $ch = curl_init();
+    $ch = createHosysCURL($page);
 
-    curl_setopt($ch, CURLOPT_URL, $page);
-    //curl_setopt($ch, CURLOPT_VERBOSE, true);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_SSLVERSION, 3);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
     curl_setopt($ch, CURLOPT_HEADER, 1);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-        'Connection: keep-alive',
-        'Pragma: no-cache',
-        'Cache-Control: no-cache',
-        // 'Upgrade-Insecure-Requests: 1'
-        'Origin: https://www.hosys.cz',
-        'Accept-Encoding: gzip, deflate, br',
-        'Accept-Language: cs,en-US;q=0.9,en;q=0.8',
-        'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Encoding: gzip, deflate, br',
-        'Accept-Language: cs,en-US;q=0.9,en;q=0.8',
-    ));
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'HEAD');
     curl_setopt($ch, CURLOPT_NOBODY, true);
-    curl_setopt($ch, CURLOPT_ENCODING, "gzip");
 
     @$result = curl_exec($ch);
 
@@ -48,7 +24,7 @@ function getCookies($page) {
     preg_match_all('/^Set\-Cookie:\s*([^;]+)/mi', $result, $matches);
 
     foreach($matches[1] as $item) {
-        if (strpos($item, COOKIE) === 0) {
+        if (strpos($item, HOSYS_COOKIE) === 0) {
             return $item;
         }
     }
@@ -56,59 +32,28 @@ function getCookies($page) {
     throw new Exception('Nenalezeno COOKIE');
 }
 
-function getHtmlData($pageNum) {
-    $cookie = getCookies(PAGE_ROZPIS);
-    // echo "cookie: " . $cookie . "<hr>";
+function processHtmlData($pageNum) {
+    $cookie = getCookies(HOSYS_PAGE_ROZPIS);
+    // echo "cookie: " . $cookie . "\n";
 
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, 'https://www.hosys.cz/Default.aspx');
-    // curl_setopt($ch, CURLOPT_VERBOSE, true);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_SSLVERSION, 3);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-        'Connection: keep-alive',
-        'Pragma: no-cache',
-        'Cache-Control: no-cache',
-        'Origin: https://www.hosys.cz',
-        'Accept-Encoding: gzip, deflate, br',
-        'Accept-Language: cs,en-US;q=0.9,en;q=0.8',
-        'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+    $extraHttpHeader = array(
         'Content-type: application/x-www-form-urlencoded',
-        'Accept: */*',
-        'Referer: ' . PAGE_ROZPIS,
+        'Referer: ' . HOSYS_PAGE_ROZPIS,
         'Cookie: ' . $cookie,
-    ));
-    curl_setopt($ch, CURLOPT_ENCODING, "gzip");
+    );
+    $extraParams = array(
+        'My_PIX' => $pageNum,
+    );
+
+    // var_dump($extraParams);
+    // var_dump(createHosysParams($extraParams));
+    // var_dump(http_build_query(createHosysParams($extraParams)));
+    // var_dump(urldecode(http_build_query(createHosysParams($extraParams))));
+
+    $ch = createHosysCURL(HOSYS_PAGE_DEFAULT, $extraHttpHeader);
     curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, ''
-        . 'My_Formular=Tygrik-Ajax'
-        . '&My_Face=Nooks'
-        . '&My_IDs=NookHosysRozpis'
-        . '&My_Cislo='
-        . '&My_Soutez='
-        . '&My_PIX=' . $pageNum
-        . '&My_PortHeight=190'
-        . '&My_FiltrDatumOd='
-        . '&My_FiltrRidi=~'
-        . '&My_FiltrLed=~'
-        . '&My_FiltrMinihokej=A'
-        . '&My_Razeni=DUC'
-        . '&My_FiltrDatumDo='
-        . '&My_FiltrUzemi=~'
-        . '&My_FiltrFce=~'
-        . '&My_FiltrPratelske=A'
-        . '&My_Varianta=STR'
-        . '&My_FiltrDatum=VSE'
-        . '&My_FiltrSoutez=~'
-        . '&My_FiltrSouperi=~'
-        . '&My_FiltrOba=OBA'
-        . '&My_FiltrStadion=~'
-        . '&My_FiltrCislo=~'
-        . '&My_FiltrStav=VSE'
-        . '&My_FiltrRequest=Filtrovat'
-        . '&t=' . time());
+    curl_setopt($ch, CURLOPT_POSTFIELDS, urldecode(http_build_query(createHosysParams($extraParams))));
+
 
     @$html = curl_exec($ch);
 
@@ -119,14 +64,14 @@ function getHtmlData($pageNum) {
     $error = curl_error($ch);
 
     if ($error) {
-        echo 'Error:' . $error;
+        echo 'Error:' . $error . "\n";
     }
 
     curl_close($ch);
 
-    // echo $html;
+    // echo $html . "\n";
     $htmlText = '<html xmlns="http://www.w3.org/1999/xhtml" lang="cs" xml:lang="cs"><head><meta http-equiv="content-type" content="text/html; charset=utf-8" /></head><body>' . $html . '</body></html>';
-    // echo $htmlText;
+    // echo $htmlText . "\n";
 
     $dom = new DOMDocument();
     @$dom->loadHTML($htmlText);
@@ -136,7 +81,7 @@ function getHtmlData($pageNum) {
 
     foreach($dom->getElementsByTagName('div') as $div) {
         if ($div->getAttribute('id') == 'Roll') {
-            echo "PAGE: " . $pageNum . "\n";
+            echo 'PAGE: ' . $pageNum . "\n";
 
             foreach($div->getElementsByTagName('tr') as $tr) {
                 $trClassName = trim($tr->getAttribute('class'));
@@ -177,9 +122,9 @@ function getHtmlData($pageNum) {
 
                 $row['status_row'] = ltrim($trClassName, 'cTr');
                 // echo "\tROW: " . $row['status_row'] . "\n";
-                
+
                 $cTdTeSouperiROfirst = true;
-   
+
                 foreach($tr->getElementsByTagName('td') as $td) {
                     // echo "\t\tCELL: " . $td->getAttribute('class') . "\n";
 
@@ -249,7 +194,7 @@ function getHtmlData($pageNum) {
                         $row['status'] = trim($td->nodeValue);
                     } else {
                         // $row['na'] = trim($td->nodeValue);
-                        echo 'Nepodporovaná hodnota: ' . $tdClasses . '; ' . trim($td->nodeValue) . '\n';
+                        echo 'Nepodporovaná hodnota: ' . $tdClasses . '; ' . trim($td->nodeValue) . "\n";
                     }
                 }
 
@@ -264,16 +209,12 @@ function getHtmlData($pageNum) {
         }
     }
 
-    //  var_dump($rows);
-    // echo "hasNextPage: " . $hasNextPage . "\n";
+    // var_dump($rows);
+    echo 'hasNextPage: ' . $hasNextPage . "\n";
 
     saveData($rows);
 
     return $hasNextPage;
-}
-
-function createPDO() {
-    return new PDO('mysql:host='.DB_SERVER.';dbname='.DB_NAME.';charset=UTF8', DB_USER, DB_PASS);
 }
 
 function deleteTempData() {
@@ -310,7 +251,7 @@ function saveData($rows) {
         // echo $sql . "\n";
         // echo $sqlValueNames . "\n";
         // echo $placeholders . "\n";
-                    
+
         $stmt = $pdo->prepare($sql);
 
         // bind param
@@ -390,7 +331,7 @@ function updateData() {
                    "    hr.status = tmp.status," .
                    "    hr.zmena = tmp.zmena," .
                    "    hr.vlozeno = tmp.vlozeno");
-            
+
         $pdo = null;
     } catch (PDOException $e) {
         echo "Error!: " . $e->getMessage() . "<br/>";
@@ -401,9 +342,9 @@ function updateData() {
 
 function downloadData() {
     $pageNum = 0;
-    //$pageNum = 451;
+    // $pageNum = 451;
 
-    while (getHtmlData($pageNum)) {
+    while (processHtmlData($pageNum)) {
         $pageNum++;
     }
 }
