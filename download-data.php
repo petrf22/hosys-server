@@ -1,8 +1,8 @@
 <?php
-require("consts.php");
-require("functions.php");
+require('consts.php');
+require('functions.php');
 
-header("Content-Type: text/plain");
+header('Content-Type: text/plain');
 
 function getCookies($page) {
     $ch = createHosysCURL($page);
@@ -32,17 +32,78 @@ function getCookies($page) {
     throw new Exception('Nenalezeno COOKIE');
 }
 
-function processHtmlData($pageNum) {
-    $cookie = getCookies(HOSYS_PAGE_ROZPIS);
-    // echo "cookie: " . $cookie . "\n";
+function getSouteze($page) {
+    $ch = createHosysCURL($page);
 
+    @$htmlText = curl_exec($ch);
+
+    $error = curl_error($ch);
+
+    if ($error) {
+        echo 'Error:' . $error;
+    }
+
+    curl_close($ch);
+
+    $dom = new DOMDocument();
+    @$dom->loadHTML($htmlText);
+
+    $xpath = new DOMXPath($dom);
+
+    $result = $xpath->query("//select[@id='FiltrSoutez']/*");
+
+    $souteze = array();
+    $poradi = 0;
+
+    foreach($result as $node) {
+        $optClass = $node->getAttribute('class');
+
+        if ($optClass == 'cOptionVse') {
+            continue;
+        }
+
+        $poradi++;
+        $uroven = 0;
+
+        if ($optClass == "cOptionUroven") {
+            $uroven = 1;
+        } else if ($optClass == "cOptionSoutez") {
+            $uroven = 2;
+        } else if ($optClass == "cOptionCast") {
+            $uroven = 3;
+        } else {
+            echo "Nepodporovaná hodnoty úrovně: ${optClass}.";
+            continue;
+        }
+
+        $id = trim($node->getAttribute('value'));
+
+        $name = str_replace("\xC2\xA0", " ", $node->nodeValue);
+        $name = trim($name);
+        $name = str_replace("  ", " ", $name);
+
+        array_push($souteze, array(
+            'hosys_soutez_id' => $id,
+            'uroven' => $uroven,
+            'nazev' => $name,
+            'poradi' => $poradi,
+        ));
+    }
+
+    return $souteze;
+}
+
+function processHosysRozpisHtml($pageNum, $hosysSoutezId, $cookie) {
     $extraHttpHeader = array(
         'Content-type: application/x-www-form-urlencoded',
         'Referer: ' . HOSYS_PAGE_ROZPIS,
         'Cookie: ' . $cookie,
     );
+
     $extraParams = array(
         'My_PIX' => $pageNum,
+        //'My_FiltrSoutez' => rawurlencode($hosysSoutezId),
+        'My_FiltrSoutez' => $hosysSoutezId,
     );
 
     // var_dump($extraParams);
@@ -50,16 +111,18 @@ function processHtmlData($pageNum) {
     // var_dump(http_build_query(createHosysParams($extraParams)));
     // var_dump(urldecode(http_build_query(createHosysParams($extraParams))));
 
+    $params = http_build_query(createHosysParams($extraParams), null, '&', PHP_QUERY_RFC3986);
+    // echo "params:" . $params2 . "\n\n";
+
     $ch = createHosysCURL(HOSYS_PAGE_DEFAULT, $extraHttpHeader);
     curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, urldecode(http_build_query(createHosysParams($extraParams))));
-
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
 
     @$html = curl_exec($ch);
 
     // $info = curl_getinfo($ch);
     // var_dump($info);
-    // echo '<hr>';
+    // echo "\n";
 
     $error = curl_error($ch);
 
@@ -71,20 +134,24 @@ function processHtmlData($pageNum) {
 
     // echo $html . "\n";
     $htmlText = '<html xmlns="http://www.w3.org/1999/xhtml" lang="cs" xml:lang="cs"><head><meta http-equiv="content-type" content="text/html; charset=utf-8" /></head><body>' . $html . '</body></html>';
-    // echo $htmlText . "\n";
+    // echo "\n\n\n" . $htmlText . "\n\n\n";
 
     $dom = new DOMDocument();
     @$dom->loadHTML($htmlText);
-    $hasNextPage = false;
 
+    $hasNextPage = false;
     $rows = array();
 
     foreach($dom->getElementsByTagName('div') as $div) {
         if ($div->getAttribute('id') == 'Roll') {
-            echo 'PAGE: ' . $pageNum . "\n";
+            echo "\"${hosysSoutezId}\": #${pageNum}\n";
 
             foreach($div->getElementsByTagName('tr') as $tr) {
                 $trClassName = trim($tr->getAttribute('class'));
+
+                if ($trClassName == 'cTrPrazdneTop') {
+                    break;
+                }
 
                 if ($trClassName == 'cTrCara') {
                     continue;
@@ -96,6 +163,7 @@ function processHtmlData($pageNum) {
                 $row = array();
 
                 $row['hosys_rozpis_id'] = $matchesOnClick[2][0] . ' ' . $matchesOnClick[1][0];
+                $row['hosys_soutez_id'] = $hosysSoutezId;
                 $row['status_row'] = '';
                 $row['den_title'] = '';
                 $row['den'] = '';
@@ -210,14 +278,14 @@ function processHtmlData($pageNum) {
     }
 
     // var_dump($rows);
-    echo 'hasNextPage: ' . $hasNextPage . "\n";
+    echo "\thasNextPage: " . ($hasNextPage ? 'true' : 'false') . "\n";
 
-    saveData($rows);
+    saveHosysRozpis($rows);
 
     return $hasNextPage;
 }
 
-function deleteTempData() {
+function deleteHosysRozpisTemp() {
     try {
         $pdo = createPDO();
 
@@ -233,7 +301,7 @@ function deleteTempData() {
     }
 }
 
-function saveData($rows) {
+function saveHosysRozpis($rows) {
     if (empty($rows)) {
         return;
     }
@@ -272,7 +340,43 @@ function saveData($rows) {
     }
 }
 
-function updateData() {
+function updateSouteze($souteze) {
+    try {
+        $pdo = createPDO();
+
+        $sql = 'INSERT INTO hosys_soutez (hosys_soutez_id, uroven, nazev, poradi) ' .
+               'VALUES (?, ?, ?, ?) ' .
+               'ON DUPLICATE KEY UPDATE uroven = VALUES(uroven), nazev = VALUES(nazev), poradi = VALUES(poradi)';
+        // echo $sql . "\n";
+        // echo $sqlValueNames . "\n";
+        // echo $placeholders . "\n";
+
+        $stmt = $pdo->prepare($sql);
+
+        // bind param
+        foreach($souteze as $soutez) {
+            // var_dump($soutez);
+            // var_dump(array_values($soutez));
+            $values = array(
+                $soutez['hosys_soutez_id'],
+                $soutez['uroven'],
+                $soutez['nazev'],
+                $soutez['poradi'],
+            );
+            // echo join("', '", $values) . "\n";
+
+            $stmt->execute($values);
+        }
+
+        $pdo = null;
+    } catch (PDOException $e) {
+        echo "Error!: " . $e->getMessage() . "<br/>";
+        // print "Error!: " . $e->getMessage() . "<br/>";
+        die();
+    }
+}
+
+function updateHosysRozpis() {
     try {
         $pdo = createPDO();
 
@@ -283,7 +387,8 @@ function updateData() {
         // Aktualizace
         $pdo->exec("UPDATE hosys_rozpis AS hr INNER JOIN hosys_rozpis_temp AS tmp ON " .
                    " hr.hosys_rozpis_id = tmp.hosys_rozpis_id and (" .
-                   "          hr.status_row <> tmp.status_row" .
+                   "          hr.hosys_soutez_id <> tmp.hosys_soutez_id" .
+                   "       or hr.status_row <> tmp.status_row" .
                    "       or hr.den_title <> tmp.den_title" .
                    "       or hr.den <> tmp.den" .
                    "       or hr.datum_title <> tmp.datum_title" .
@@ -307,6 +412,7 @@ function updateData() {
                    "       or hr.status <> tmp.status" .
                    "       or hr.zmena <> tmp.zmena)" .
                    " SET" .
+                   "    hr.hosys_soutez_id = tmp.hosys_soutez_id," .
                    "    hr.status_row = tmp.status_row," .
                    "    hr.den_title = tmp.den_title," .
                    "    hr.den = tmp.den," .
@@ -340,21 +446,31 @@ function updateData() {
     }
 }
 
-function downloadData() {
+function downloadHosysRozpis($souteze) {
+    $cookie = getCookies(HOSYS_PAGE_ROZPIS);
+    // echo "cookie: " . $cookie . "\n";
+
+    foreach($souteze as $soutez) {
+        if ($soutez['uroven'] < 3) {
+            continue;
+        }
+
     $pageNum = 0;
     // $pageNum = 451;
+        $hosysSoutezId = $soutez['hosys_soutez_id'];
 
-    while (processHtmlData($pageNum)) {
+        while (processHosysRozpisHtml($pageNum, $hosysSoutezId, $cookie)) {
         $pageNum++;
     }
 }
+}
 
-$timeStart = new DateTime("now");
+$souteze = getSouteze(HOSYS_PAGE_ROZPIS);
+// var_dump($souteze);
+updateSouteze($souteze);
+// echo "souteze: " . $souteze . "\n";
 
-deleteTempData();
-downloadData();
-updateData();
-
-$timeStop = new DateTime("now");
-echo $timeStart->diff($timeStop)->format('Doba běhu: %ss.') . "\n";
+deleteHosysRozpisTemp();
+downloadHosysRozpis($souteze);
+updateHosysRozpis();
 ?>
