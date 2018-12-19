@@ -165,6 +165,8 @@ function processHosysRozpisHtml($pageNum, $hosysSoutezId, $cookie) {
                 $row['hosys_rozpis_id'] = $matchesOnClick[2][0] . ' ' . $matchesOnClick[1][0];
                 $row['hosys_soutez_id'] = $hosysSoutezId;
                 $row['status_row'] = '';
+                $row['datum_od'] = '';
+                $row['datum_do'] = '';
                 $row['den_title'] = '';
                 $row['den'] = '';
                 $row['datum_title'] = '';
@@ -266,7 +268,43 @@ function processHosysRozpisHtml($pageNum, $hosysSoutezId, $cookie) {
                     }
                 }
 
-                array_push($rows, $row);
+                // pokus o nastavení data a času OD DO
+                preg_match_all('/([0-9]+\.+[0-9]+\.+[0-9]+)/', $row['cas_title'], $datumOdDo);
+                preg_match_all('/([0-9]+:[0-9]+)/', $row['cas'], $casOdDo);
+                // print_r($row['cas_title']);
+                // print_r($datumOdDo);
+                // print_r($row['cas']);
+                // print_r($casOdDo);
+
+                $datumOd = null;
+                $datumDo = null;
+                
+                if (count($datumOdDo) == 1) {
+                    $datumOd = $datumOdDo[0][0];
+                    $datumDo = $datumOdDo[0][0];
+                } else if (count($datumOdDo) >= 2) {
+                    $datumOd = $datumOdDo[0][0];
+                    $datumDo = $datumOdDo[1][0];
+                }
+
+                if (count($casOdDo) == 0) {
+                    $datumOd = $datumOd . ' 00:00';
+                    $datumDo = $datumDo . ' 23:59';
+                } else if (count($casOdDo) == 1) {
+                    $datumOd = $datumOd . ' ' . $casOdDo[0][0];
+                    $datumDo = $datumDo . ' ' . $casOdDo[0][0];
+                } else if (count($casOdDo) >= 2) {
+                    $datumOd = $datumOd . ' ' . (empty($casOdDo[0][0]) ? '00:00' : $casOdDo[0][0]);
+                    $datumDo = $datumDo . ' ' . (empty($casOdDo[1][0]) ? '23:59' : $casOdDo[1][0]);
+                }
+
+                $row['datum_od'] = DateTime::createFromFormat('d.m.Y H:i', $datumOd)->format('Y-m-d H:i:s');
+                $row['datum_do'] = DateTime::createFromFormat('d.m.Y H:i', $datumDo)->format('Y-m-d H:i:s');
+
+                // print_r($row['datum_od']);
+                // print_r($row['datum_do']);
+
+                array_push($rows, $row); 
             }
         } else {
             foreach($div->getElementsByTagName('a') as $a) {
@@ -388,6 +426,8 @@ function updateHosysRozpis() {
         $pdo->exec("UPDATE hosys_rozpis AS hr INNER JOIN hosys_rozpis_temp AS tmp ON " .
                    " hr.hosys_rozpis_id = tmp.hosys_rozpis_id and (" .
                    "          hr.hosys_soutez_id <> tmp.hosys_soutez_id" .
+                   "       or hr.datum_od <> tmp.datum_od" .
+                   "       or hr.datum_do <> tmp.datum_do" .
                    "       or hr.status_row <> tmp.status_row" .
                    "       or hr.den_title <> tmp.den_title" .
                    "       or hr.den <> tmp.den" .
@@ -414,6 +454,8 @@ function updateHosysRozpis() {
                    " SET" .
                    "    hr.hosys_soutez_id = tmp.hosys_soutez_id," .
                    "    hr.status_row = tmp.status_row," .
+                   "    hr.datum_od = tmp.datum_od," .
+                   "    hr.datum_do = tmp.datum_do," .
                    "    hr.den_title = tmp.den_title," .
                    "    hr.den = tmp.den," .
                    "    hr.datum_title = tmp.datum_title," .
@@ -455,14 +497,15 @@ function downloadHosysRozpis($souteze) {
             continue;
         }
 
-    $pageNum = 0;
-    // $pageNum = 451;
+        $pageNum = 0;
+        // $pageNum = 451;
         $hosysSoutezId = $soutez['hosys_soutez_id'];
 
         while (processHosysRozpisHtml($pageNum, $hosysSoutezId, $cookie)) {
-        $pageNum++;
+            $pageNum++;
+            // break;
+        }
     }
-}
 }
 
 $souteze = getSouteze(HOSYS_PAGE_ROZPIS);
