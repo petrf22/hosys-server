@@ -156,13 +156,20 @@ $container['errorHandler'] = function ($c) {
 $app->get('/rozpis', function ($request, $response, $args) {
   $this->logger->addInfo("GET '/rozpis");
 
+  $mapper = new HosysRozpisMapper($this->db);
+
   $params = $request->getQueryParams();
+  $soutez = isset($params['soutez']) ? $params['soutez'] : "";
+  $dayMin = isset($params['dayMin']) ? intval($params['dayMin']) : -10;
+  $dayMax = isset($params['dayMax']) ? intval($params['dayMax']) : 10;
   $offset = isset($params['offset']) ? intval($params['offset']) : 0;
   $max = isset($params['max']) ? intval($params['max']) : 10;
 
-  $mapper = new HosysRozpisMapper($this->db);
-
-  $results = $mapper->findAll($offset, $max);
+  if (!empty($soutez)) {
+    $results = $mapper->findBySoutez($soutez, $dayMin, $dayMax);
+  } else {
+    $results = $mapper->findAll($offset, $max);
+  }
 
   return $this->response->withJson($results, null, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
 });
