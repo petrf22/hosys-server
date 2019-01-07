@@ -2,7 +2,7 @@
 require('consts.php');
 require('functions.php');
 
-header('Content-Type: text/plain');
+header('Content-Type: text/plain; charset=utf-8');
 
 function getCookies($page) {
     $ch = createHosysCURL($page);
@@ -508,6 +508,217 @@ function downloadHosysRozpis($souteze) {
     }
 }
 
+function updateSoutezeTab($startImport) {
+    try {
+        $pdo = createPDO();
+
+        //var_dump($startImport);
+        $sql = 'SELECT distinct hosys_soutez_id FROM hosys_rozpis WHERE vlozeno >= now() - 10000';
+        //$sql = 'SELECT distinct hosys_soutez_id FROM hosys_rozpis WHERE vlozeno >=  < :vlozeno';
+        $stmt = $pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
+        // $stmt->bindValue(':vlozeno', $startImport);
+        $stmt->execute();
+        // $rows = $stmt->fetchAll();
+    
+        $hosysSoutezIds = array();
+       
+        if ($stmt->execute()) {
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                array_push($hosysSoutezIds, $row['hosys_soutez_id']);
+            }
+        }
+        
+        $stmt = null;
+        $pdo = null;
+
+        // var_dump($hosysSoutezIds);
+
+        processHosysTabulky($hosysSoutezIds);
+        processHosysSouteze($hosysSoutezIds);
+    } catch (PDOException $e) {
+        echo "Error!: " . $e->getMessage() . "<br/>";
+        // print "Error!: " . $e->getMessage() . "<br/>";
+        die();
+    }
+}
+
+function processHosysTabulky($hosysSoutezIds) {
+    $cookie = getCookies(HOSYS_PAGE_TABULKY);
+
+    $extraHttpHeader = array(
+        'Content-type: application/x-www-form-urlencoded',
+        'Referer: ' . HOSYS_PAGE_TABULKY,
+        'Cookie: ' . $cookie,
+    );
+
+    foreach($hosysSoutezIds as $hosysSoutezId) {
+        echo "Aktualizace soutěže (HTML tabulky) - TABULKA: $hosysSoutezId";
+
+        $pageParams = array(
+            'My_Formular' => 'Tygrik-Ajax',
+            'My_Face' => 'Nooks',
+            'My_IDs' => 'NookHosysTabulky',
+            'My_PortHeight' => '250',
+            'My_FiltrSoutez' => $hosysSoutezId,
+            'My_FiltrRequest' => 'Filtrovat',
+        );
+    
+        // var_dump($extraHttpHeader);
+        // var_dump($pageParams);
+    
+        $params = http_build_query($pageParams, null, '&', PHP_QUERY_RFC3986);
+        // echo "params:" . $params . "\n\n";
+    
+        $ch = createHosysCURL(HOSYS_PAGE_DEFAULT, $extraHttpHeader);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+    
+        @$html = curl_exec($ch);
+    
+        // $info = curl_getinfo($ch);
+        // var_dump($info);
+        // echo "\n";
+    
+        $error = curl_error($ch);
+    
+        if ($error) {
+            echo 'Error:' . $error . "\n";
+        }
+    
+        curl_close($ch);
+    
+        // echo "\n\n\n" . $html . "\n\n\n";
+        $htmlText = '<!DOCTYPE html><html lang="cs"><body>' . $html . '</body></html>';
+        // echo "\n\n\n" . $htmlText . "\n\n\n";
+    
+        $dom = new DOMDocument();
+        @$dom->loadHTML($htmlText);
+    
+        $htmlTab = $dom->getElementById('Roll');
+
+        $resultText = "";
+
+        if ($htmlTab) {
+            $resultText = $dom->saveHTML($htmlTab->firstChild);
+            // var_dump($resultText);
+            // echo "\n\n\n" . $resultText . "\n\n\n";
+        }
+
+        saveHosysTabulkyHtml($hosysSoutezId, $resultText, null);
+    }
+}
+
+function processHosysSouteze($hosysSoutezIds) {
+    $cookie = getCookies(HOSYS_PAGE_SOUTEZE);
+
+    $extraHttpHeader = array(
+        'Content-type: application/x-www-form-urlencoded',
+        'Referer: ' . HOSYS_PAGE_SOUTEZE,
+        'Cookie: ' . $cookie,
+    );
+
+    foreach($hosysSoutezIds as $hosysSoutezId) {
+        echo "Aktualizace soutěže (HTML tabulky) - SOUTEZ: $hosysSoutezId";
+
+        $pageParams = array(
+            'My_Formular' => 'Tygrik-Ajax',
+            'My_Face' => 'Nooks',
+            'My_IDs' => 'NookHosysSouteze',
+            'My_PortHeight' => '250',
+            'My_FiltrSoutez' => $hosysSoutezId,
+            'My_FiltrRequest' => 'Filtrovat',
+        );
+    
+        // var_dump($extraHttpHeader);
+        // var_dump($pageParams);
+    
+        $params = http_build_query($pageParams, null, '&', PHP_QUERY_RFC3986);
+        // echo "params:" . $params . "\n\n";
+    
+        $ch = createHosysCURL(HOSYS_PAGE_DEFAULT, $extraHttpHeader);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+    
+        @$html = curl_exec($ch);
+    
+        // $info = curl_getinfo($ch);
+        // var_dump($info);
+        // echo "\n";
+    
+        $error = curl_error($ch);
+    
+        if ($error) {
+            echo 'Error:' . $error . "\n";
+        }
+    
+        curl_close($ch);
+    
+        // echo "\n\n\n" . $html . "\n\n\n";
+        $htmlText = '<!DOCTYPE html><html lang="cs"><body>' . $html . '</body></html>';
+        // echo "\n\n\n" . $htmlText . "\n\n\n";
+    
+        $dom = new DOMDocument();
+        @$dom->loadHTML($htmlText);
+    
+        $htmlTab = $dom->getElementById('Roll');
+
+        $resultText = "";
+
+        if ($htmlTab) {
+            $resultText = $dom->saveHTML($htmlTab->firstChild);
+            // var_dump($resultText);
+            // echo "\n\n\n" . $resultText . "\n\n\n";
+        }
+
+        saveHosysTabulkyHtml($hosysSoutezId, null, $resultText);
+    }
+}
+
+function saveHosysTabulkyHtml($hosysSoutezId, $htmlTabulka, $htmlSoutez) {
+    try {
+        $pdo = createPDO();
+
+        $sql = "";
+        $values = array(
+            $hosysSoutezId,
+            1,
+        );
+    
+        if (isset($htmlTabulka)) {
+            $sql = 'INSERT INTO hosys_soutez_tab (hosys_soutez_id, hosys_sezona_id, html_tabulka, zmeneno) ' .
+                   'VALUES (?, ?, ?, NOW()) ' .
+                   'ON DUPLICATE KEY UPDATE hosys_soutez_id = VALUES(hosys_soutez_id), hosys_sezona_id = VALUES(hosys_sezona_id), ' .
+                   '                        html_tabulka = VALUES(html_tabulka), zmeneno = VALUES(zmeneno) ';
+            array_push($values, $htmlTabulka);
+        } else if (isset($htmlSoutez)) {
+            $sql = 'INSERT INTO hosys_soutez_tab (hosys_soutez_id, hosys_sezona_id, html_soutez, zmeneno) ' .
+                   'VALUES (?, ?, ?, NOW()) ' .
+                   'ON DUPLICATE KEY UPDATE hosys_soutez_id = VALUES(hosys_soutez_id), hosys_sezona_id = VALUES(hosys_sezona_id), ' .
+                   '                        html_soutez = VALUES(html_soutez), zmeneno = VALUES(zmeneno) ';
+            array_push($values, $htmlSoutez);
+        } else {
+            throw new Exception('Nepodorovaný stav.');            
+        }
+
+        // echo $sql . "\n";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($values);
+
+        $pdo = null;
+    } catch (PDOException $e) {
+        echo "Error!: " . $e->getMessage() . "<br/>";
+        // print "Error!: " . $e->getMessage() . "<br/>";
+        die();
+    }
+}
+
+// ------------------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------------------
+
+$startImport = nowFromDb();
+
 $souteze = getSouteze(HOSYS_PAGE_ROZPIS);
 // var_dump($souteze);
 updateSouteze($souteze);
@@ -516,4 +727,6 @@ updateSouteze($souteze);
 deleteHosysRozpisTemp();
 downloadHosysRozpis($souteze);
 updateHosysRozpis();
+
+updateSoutezeTab($startImport);
 ?>

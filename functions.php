@@ -4,6 +4,23 @@ function createPDO() {
     return new PDO('mysql:host='.DB_SERVER.';dbname='.DB_NAME.';charset=UTF8', DB_USER, DB_PASS);
 }
 
+function nowFromDb() {
+    try {
+        $pdo = createPDO();
+
+        $stmt = $pdo->prepare("select now() as now"); 
+        $stmt->execute(); 
+
+        $row = $stmt->fetch();
+
+        return $row['now'];
+    } catch (PDOException $e) {
+        echo "Error!: " . $e->getMessage() . "<br/>";
+        // print "Error!: " . $e->getMessage() . "<br/>";
+        die();
+    }
+}
+
 function createHosysCURL($page, $extraHttpHeader = null) {
     $httpHeader = array(
         'Connection: keep-alive',
