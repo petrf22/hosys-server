@@ -513,10 +513,11 @@ function updateSoutezeTab($startImport) {
         $pdo = createPDO();
 
         //var_dump($startImport);
-        $sql = 'SELECT distinct hosys_soutez_id FROM hosys_rozpis WHERE vlozeno >= now() - 10000';
-        //$sql = 'SELECT distinct hosys_soutez_id FROM hosys_rozpis WHERE vlozeno >=  < :vlozeno';
+        //$sql = 'SELECT distinct hosys_soutez_id FROM hosys_rozpis WHERE vlozeno >= now() - 10000';
+        $sql = 'SELECT distinct hosys_soutez_id FROM hosys_rozpis WHERE vlozeno >= :vlozeno';
         $stmt = $pdo->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
-        // $stmt->bindValue(':vlozeno', $startImport);
+        $stmt->bindValue(':vlozeno', $startImport, PDO::PARAM_STR);
+
         $stmt->execute();
         // $rows = $stmt->fetchAll();
     
@@ -552,7 +553,7 @@ function processHosysTabulky($hosysSoutezIds) {
     );
 
     foreach($hosysSoutezIds as $hosysSoutezId) {
-        echo "Aktualizace soutěže (HTML tabulky) - TABULKA: $hosysSoutezId";
+        echo "Aktualizace soutěže (HTML tabulky) - TABULKA: $hosysSoutezId\n";
 
         $pageParams = array(
             'My_Formular' => 'Tygrik-Ajax',
@@ -588,7 +589,7 @@ function processHosysTabulky($hosysSoutezIds) {
         curl_close($ch);
     
         // echo "\n\n\n" . $html . "\n\n\n";
-        $htmlText = '<!DOCTYPE html><html lang="cs"><body>' . $html . '</body></html>';
+        $htmlText = '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"></head><body>' . mb_convert_encoding($html, 'HTML-ENTITIES', "UTF-8") . '</body></html>';
         // echo "\n\n\n" . $htmlText . "\n\n\n";
     
         $dom = new DOMDocument();
@@ -618,7 +619,7 @@ function processHosysSouteze($hosysSoutezIds) {
     );
 
     foreach($hosysSoutezIds as $hosysSoutezId) {
-        echo "Aktualizace soutěže (HTML tabulky) - SOUTEZ: $hosysSoutezId";
+        echo "Aktualizace soutěže (HTML tabulky) - SOUTEZ: $hosysSoutezId\n";
 
         $pageParams = array(
             'My_Formular' => 'Tygrik-Ajax',
@@ -654,7 +655,7 @@ function processHosysSouteze($hosysSoutezIds) {
         curl_close($ch);
     
         // echo "\n\n\n" . $html . "\n\n\n";
-        $htmlText = '<!DOCTYPE html><html lang="cs"><body>' . $html . '</body></html>';
+        $htmlText = '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"></head><body>' . mb_convert_encoding($html, 'HTML-ENTITIES', "UTF-8") . '</body></html>';
         // echo "\n\n\n" . $htmlText . "\n\n\n";
     
         $dom = new DOMDocument();

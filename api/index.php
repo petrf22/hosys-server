@@ -228,7 +228,6 @@ $app->get('/soutez/{id}/info', function ($request, $response, $args) {
     $mapper = new HosysSoutezTabMapper($this->db);
 
     $data = $mapper->findByHosysSoutezId($args['id']);
-    var_dump($data);
     $results = array(
         "hosysSoutezId" => $args['id'],
         "html" => isset($data->htmlSoutez) ? $data->htmlSoutez : "",
