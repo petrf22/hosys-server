@@ -242,6 +242,7 @@ function processHosysRozpisHtml($pageNum, $hosysSoutezId, $cookie) {
                         $row['domaci_title'] = $span ? trim($span->getAttribute('title')) : '';
                         $row['domaci'] = $span ? trim($span->nodeValue) : '';
                         $row['zmena'] = $span ? $row['zmena'] || (strpos($span->getAttribute('class'), 'kZmena') !== false) : false;
+                        $cTdTeSouperiROfirst = false;
                     } else if (strpos($tdClasses, 'cTdTeSouperiRO') !== false && !$cTdTeSouperiROfirst) {
                         // <span title="HC DYNAMO PARDUBICE Piráti Chomutov - CV (50302)">HC DYNAMO PARDUBICE</span>
                         $span = $td->getElementsByTagName('span')[0];
