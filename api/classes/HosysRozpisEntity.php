@@ -3,6 +3,8 @@ class HosysRozpisEntity extends AbstractEntity
 {
     public $hosysRozpisId;
     public $hosysSoutezId;
+    public $datumOd;
+    public $datumDo;
     public $statusRow;
     public $denTitle;
     public $den;
@@ -32,7 +34,9 @@ class HosysRozpisEntity extends AbstractEntity
         $self = new self();
 
 		$self->hosysRozpisId = $self->getValue('hosys_rozpis_id', $data);
-		$self->hosysSoutezId = $self->getValue('hosys_soutez_id', $data);
+        $self->hosysSoutezId = $self->getValue('hosys_soutez_id', $data);
+        $self->datumOd = date_format(new DateTime($self->getValue('datum_od', $data)), 'c');
+        $self->datumDo = date_format(new DateTime($self->getValue('datum_do', $data)), 'c');
         $self->statusRow = $self->getValue('status_row', $data);
         $self->denTitle = $self->getValue('den_title', $data);
         $self->den = $self->getValue('den', $data);
@@ -56,7 +60,7 @@ class HosysRozpisEntity extends AbstractEntity
         $self->hosteZkr = $self->getValue('hoste_zkr', $data);
         $self->status = $self->getValue('status', $data);
         $self->zmena = $self->getBoolValue('zmena', $data);
-        $self->vlozeno = $self->getValue('vlozeno', $data);
+        $self->vlozeno = date_format(new DateTime($self->getValue('vlozeno', $data)), 'c');
 
         return $self;
     }
