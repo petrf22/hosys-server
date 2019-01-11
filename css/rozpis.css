@@ -6,7 +6,7 @@ body {
 .cTdUtkaniAll {
   display: none;
 }
-@media screen and (max-width: 360px) {
+@media (orientation: portrait) {
   .cTdTiStadionRO,
   .cTdTeStadion,
   .cTdTiSoutezRO,
